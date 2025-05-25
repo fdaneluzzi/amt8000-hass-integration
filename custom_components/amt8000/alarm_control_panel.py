@@ -44,8 +44,6 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
 
     _attr_supported_features = (
           AlarmControlPanelEntityFeature.ARM_AWAY
-        # | AlarmControlPanelEntityFeature.ARM_NIGHT
-        # | AlarmControlPanelEntityFeature.ARM_HOME
         | AlarmControlPanelEntityFeature.TRIGGER
     )
 
@@ -55,7 +53,6 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
         self.status = None
         self.isec_client = isec_client
         self.password = password
-        self._is_on = False
         
         # Set device info
         self._attr_device_info = DeviceInfo(
@@ -112,19 +109,15 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
             LOGGER.debug("Alarm status: %s", alarm_status)
 
             if alarm_status == "armed_away":
-                self._is_on = True
                 LOGGER.debug("Alarm is armed away")
                 return AlarmControlPanelState.ARMED_AWAY
             elif alarm_status == "partial_armed":
-                self._is_on = True
                 LOGGER.debug("Alarm is partially armed")
                 return AlarmControlPanelState.ARMED_HOME
             elif alarm_status == "disarmed":
-                self._is_on = False
                 LOGGER.debug("Alarm is disarmed")
                 return AlarmControlPanelState.DISARMED
             else:
-                self._is_on = False
                 LOGGER.debug("Alarm is in unknown state")
                 return AlarmControlPanelState.UNKNOWN
 
@@ -132,76 +125,30 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
             LOGGER.error("Error getting state: %s", str(e))
             return AlarmControlPanelState.UNKNOWN
 
-    def _arm_away(self):
-        """Arm AMT in away mode"""
-        self.isec_client.connect()
-        self.isec_client.auth(self.password)
-        result = self.isec_client.arm_system(0)
-        self.isec_client.close()
-        if result == "armed":
-            return 'armed_away'
-
-    def _disarm(self):
-        """Arm AMT in away mode"""
+    async def async_alarm_disarm(self, code=None) -> None:
+        """Send disarm command."""
         self.isec_client.connect()
         self.isec_client.auth(self.password)
         result = self.isec_client.disarm_system(0)
         self.isec_client.close()
         if result == "disarmed":
-            return 'disarmed'
+            await self.coordinator.async_request_refresh()
 
+    async def async_alarm_arm_away(self, code=None) -> None:
+        """Send arm away command."""
+        self.isec_client.connect()
+        self.isec_client.auth(self.password)
+        result = self.isec_client.arm_system(0)
+        self.isec_client.close()
+        if result == "armed":
+            await self.coordinator.async_request_refresh()
 
-    def _trigger_alarm(self):
-        """Trigger Alarm"""
+    async def async_alarm_trigger(self, code=None) -> None:
+        """Send alarm trigger command."""
         self.isec_client.connect()
         self.isec_client.auth(self.password)
         result = self.isec_client.panic(1)
         self.isec_client.close()
         if result == "triggered":
-            return "triggered"
-
-
-    def alarm_disarm(self, code=None) -> None:
-        """Send disarm command."""
-        self._disarm()
-
-    async def async_alarm_disarm(self, code=None) -> None:
-        """Send disarm command."""
-        self._disarm()
-
-    def alarm_arm_away(self, code=None) -> None:
-        """Send arm away command."""
-        self._arm_away()
-
-    async def async_alarm_arm_away(self, code=None) -> None:
-        """Send arm away command."""
-        self._arm_away()
-
-    def alarm_trigger(self, code=None) -> None:
-        """Send alarm trigger command."""
-        self._trigger_alarm()
-
-    async def async_alarm_trigger(self, code=None) -> None:
-        """Send alarm trigger command."""
-        self._trigger_alarm()
-
-    @property
-    def is_on(self) -> bool | None:
-        """Return True if entity is on."""
-        return self._is_on
-
-    def turn_on(self, **kwargs: Any) -> None:
-        self._arm_away()
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the entity on."""
-        self._arm_away()
-
-    def turn_off(self, **kwargs: Any) -> None:
-        """Turn the entity off."""
-        self._disarm()
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the entity off."""
-        self._disarm()
+            await self.coordinator.async_request_refresh()
 
