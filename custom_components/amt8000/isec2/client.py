@@ -72,13 +72,13 @@ def build_status(data):
     for i in range(max_zones):
         try:
             # Calculate the correct byte position for each zone
-            zone_byte = payload[22 + i]  # Each zone has 1 byte of status
+            zone_byte = payload[21 + i]  # Each zone has 1 byte of status
             
             # Log the raw zone byte for debugging
             LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
             
             zone_status = "normal"
-            
+
             # Check for different types of zone problems
             # Bit 0: Zone open/closed (1 = open, 0 = closed)
             # Bit 1: Zone tamper (1 = tamper, 0 = normal)
@@ -90,17 +90,17 @@ def build_status(data):
             problems = []
             
             # Verifica todos os problemas ativos
-            if (zone_byte & 0x01) == 0:  # Bit 0: Zone open
+            if (zone_byte & 0x01) > 0:  # Bit 0: Zone open
                 problems.append("open")
-            if (zone_byte & 0x02) == 0:  # Bit 1: Zone tamper
+            if (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
                 problems.append("tamper")
-            if (zone_byte & 0x04) == 0:  # Bit 2: Zone bypassed
+            if (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
                 problems.append("bypassed")
-            if (zone_byte & 0x08) == 0:  # Bit 3: Zone low battery
+            if (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
                 problems.append("low_battery")
-            if (zone_byte & 0x10) == 0:  # Bit 4: Zone communication failure
+            if (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
                 problems.append("comm_failure")
-            if (zone_byte & 0x20) == 0:  # Bit 5: Zone triggered
+            if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
                 problems.append("triggered")
                 
             # If there are any problems, join them with a comma
