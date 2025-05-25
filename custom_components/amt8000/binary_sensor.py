@@ -37,7 +37,7 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
     _attr_should_poll = False
     _attr_device_class = BinarySensorDeviceClass.SAFETY  # use outro se preferir
 
-    def __init__(self, coordinator: AMTCoordinator, zone_id: str) -> None:
+    def __init__(self, coordinator: AmtCoordinator, zone_id: str) -> None:
         """Init."""
         super().__init__(coordinator)
 
