@@ -1,23 +1,22 @@
-"""Binary sensors (zones) for the Intelbras AMT-8000."""
+"""Sensors (zones) for the Intelbras AMT-8000."""
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorEntity,
-    BinarySensorDeviceClass,
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorDeviceClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.const import STATE_ON, STATE_OFF
 
 from .const import DOMAIN
 from .coordinator import AmtCoordinator
 
 # ---------------------------- setup --------------------------------- #
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Adicionar um binary_sensor por zona."""
+    """Adicionar um sensor por zona."""
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
     config = data["config"]
@@ -25,27 +24,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
     await coordinator.async_request_refresh()
 
     entities = [
-        AMTZoneBinarySensor(coordinator, zone_id, config["host"])
+        AMTZoneSensor(coordinator, zone_id, config["host"])
         for zone_id in coordinator.data.get("zones", {}).keys()
     ]   
     async_add_entities(entities)
 
 
 # --------------------------- entidade -------------------------------- #
-class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class AMTZoneSensor(CoordinatorEntity, SensorEntity):
     """Representa uma zona (setor) da AMT-8000."""
 
     _attr_should_poll = False
-    _attr_state_options = [
-        "seguro",
-        "disparado",
-        "violado",
-        "aberto",
-        "bateria_fraca",
-        "falha_comunicacao",
-        "ignorado",
-        "inseguro"
-    ]
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator: AmtCoordinator, zone_id: str, host: str) -> None:
         """Init."""
@@ -53,7 +43,7 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
         self._zone_id = zone_id
         self._attr_unique_id = f"amt8000_{host}_zone_{zone_id}"
-        self._attr_name = f"AMT-8000 Zona {zone_id}"
+        self._attr_name = f"Zona {zone_id}"
 
         # Faz o sensor aparecer dentro do mesmo dispositivo do painel
         self._attr_device_info = DeviceInfo(
@@ -64,38 +54,8 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
         )
 
     @property
-    def device_class(self) -> BinarySensorDeviceClass:
-        """Return the device class of the sensor."""
-        zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
-        
-        # If there are multiple problems, prioritize the most critical one
-        if isinstance(zone_status, str):
-            problems = zone_status.split(",")
-            
-            if "triggered" in problems:
-                return BinarySensorDeviceClass.SAFETY
-            elif "tamper" in problems:
-                return BinarySensorDeviceClass.TAMPER
-            elif "open" in problems:
-                return BinarySensorDeviceClass.DOOR
-            elif "low_battery" in problems:
-                return BinarySensorDeviceClass.BATTERY
-            elif "comm_failure" in problems:
-                return BinarySensorDeviceClass.CONNECTIVITY
-            elif "bypassed" in problems:
-                return BinarySensorDeviceClass.SAFETY
-                
-        return BinarySensorDeviceClass.SAFETY
-
-    @property
-    def is_on(self) -> bool:
-        """Return True when the zone has a problem."""
-        zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
-        return zone_status != "normal"
-
-    @property
-    def state(self) -> str:
-        """Return the state of the sensor for automations."""
+    def native_value(self) -> str:
+        """Return the state of the sensor."""
         zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
         
         if zone_status == "normal":
@@ -134,8 +94,7 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return {
             "status": zone_status,
             "problems": problems,
-            "zone_id": self._zone_id,
-            "state": self.state
+            "zone_id": self._zone_id
         }
 
     # O Coordinator já cuida da atualização: quando ele muda, a entidade recebe
