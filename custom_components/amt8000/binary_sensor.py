@@ -11,33 +11,33 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import AMT8000Coordinator
+from .coordinator import AMTCoordinator
 
 # ---------------------------- setup --------------------------------- #
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> None:
     """Add a binary_sensor entity per zone."""
-    coordinator: AMT8000Coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: AMTCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     # Se ainda não houver dados (p.ex. logo após reboot), espere 1ª atualização
     await coordinator.async_config_entry_first_refresh()
 
     entities: list[BinarySensorEntity] = [
-        AMT8000ZoneBinarySensor(coordinator, zone_id)
+        AMTZoneBinarySensor(coordinator, zone_id)
         for zone_id in coordinator.data.get("zones", {}).keys()
     ]
     async_add_entities(entities)
 
 
 # --------------------------- entidade -------------------------------- #
-class AMT8000ZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Representa uma zona (setor) da AMT-8000."""
 
     _attr_should_poll = False
     _attr_device_class = BinarySensorDeviceClass.SAFETY  # use outro se preferir
 
-    def __init__(self, coordinator: AMT8000Coordinator, zone_id: str) -> None:
+    def __init__(self, coordinator: AMTCoordinator, zone_id: str) -> None:
         """Init."""
         super().__init__(coordinator)
 
