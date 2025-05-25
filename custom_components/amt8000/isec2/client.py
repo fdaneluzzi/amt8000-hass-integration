@@ -45,20 +45,28 @@ def build_status(data):
         zone_status = "normal"
         
         # Check for different types of zone problems
-        # Multiple bits can be set at the same time
+        # Bit 0: Zone open/closed (0 = closed, 1 = open)
+        # Bit 1: Zone tamper (0 = normal, 1 = tamper)
+        # Bit 2: Zone bypassed (0 = normal, 1 = bypassed)
+        # Bit 3: Zone low battery (0 = normal, 1 = low battery)
+        # Bit 4: Zone communication failure (0 = normal, 1 = failure)
+        # Bit 5: Zone triggered (0 = normal, 1 = triggered)
+        
         problems = []
         
-        if (zone_byte & 0x01) > 0:  # Bit 0: Zone triggered
+        # Primeiro verifica se está disparado (mais crítico)
+        if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
             problems.append("triggered")
-        if (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
-            problems.append("tamper")
-        if (zone_byte & 0x04) > 0:  # Bit 2: Zone open
+        # Depois verifica outros problemas
+        elif (zone_byte & 0x01) > 0:  # Bit 0: Zone open
             problems.append("open")
-        if (zone_byte & 0x08) > 0:  # Bit 3: Zone bypassed
+        elif (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
+            problems.append("tamper")
+        elif (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
             problems.append("bypassed")
-        if (zone_byte & 0x10) > 0:  # Bit 4: Zone low battery
+        elif (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
             problems.append("low_battery")
-        if (zone_byte & 0x20) > 0:  # Bit 5: Zone communication failure
+        elif (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
             problems.append("comm_failure")
             
         # If there are any problems, join them with a comma

@@ -36,6 +36,16 @@ class AMTZoneSensor(CoordinatorEntity, SensorEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
+    _attr_state_options = [
+        "seguro",
+        "disparado",
+        "aberto",
+        "violado",
+        "ignorado",
+        "bateria_fraca",
+        "falha_comunicacao",
+        "inseguro"
+    ]
 
     def __init__(self, coordinator: AmtCoordinator, zone_id: str, host: str) -> None:
         """Init."""
@@ -61,22 +71,22 @@ class AMTZoneSensor(CoordinatorEntity, SensorEntity):
         if zone_status == "normal":
             return "seguro"
             
-        # If there are multiple problems, return the most critical one
+        # Se houver múltiplos problemas, retorna o mais crítico
         if isinstance(zone_status, str):
             problems = zone_status.split(",")
             
             if "triggered" in problems:
                 return "disparado"
-            elif "tamper" in problems:
-                return "violado"
             elif "open" in problems:
                 return "aberto"
+            elif "tamper" in problems:
+                return "violado"
+            elif "bypassed" in problems:
+                return "ignorado"
             elif "low_battery" in problems:
                 return "bateria_fraca"
             elif "comm_failure" in problems:
                 return "falha_comunicacao"
-            elif "bypassed" in problems:
-                return "ignorado"
                 
         return "inseguro"
 
