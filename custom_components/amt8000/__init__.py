@@ -7,6 +7,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 
 from .const import DOMAIN
+from .coordinator import AmtCoordinator
+from .isec2.client import Client as ISecClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,9 +17,19 @@ PLATFORMS: list[str] = ["alarm_control_panel", "binary_sensor"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up AMT-8000 from a config entry."""
-
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = entry.data
+    
+    # Create ISec client
+    isec_client = ISecClient(entry.data["host"], entry.data["port"])
+    
+    # Create coordinator
+    coordinator = AmtCoordinator(hass, isec_client, entry.data["password"])
+    
+    # Store coordinator in hass.data
+    hass.data[DOMAIN][entry.entry_id] = coordinator
+    
+    # Start the coordinator
+    await coordinator.async_config_entry_first_refresh()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
