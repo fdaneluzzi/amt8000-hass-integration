@@ -38,6 +38,12 @@ def build_status(data):
 
     model = "AMT-8000" if payload[0] == 1 else "Unknown"
 
+    # Get individual zone status from payload
+    zones = {}
+    for i in range(8):  # AMT-8000 has 8 zones
+        zone_byte = payload[21 + i]  # Zones status starts at byte 21
+        zones[str(i + 1)] = "triggered" if (zone_byte & 0x01) > 0 else "normal"
+
     status = {
         "model": model,
         "version": f"{payload[1]}.{payload[2]}.{payload[3]}",
@@ -45,6 +51,7 @@ def build_status(data):
         "zonesFiring": (payload[20] & 0x8) > 0,
         "zonesClosed": (payload[20] & 0x4) > 0,
         "siren": (payload[20] & 0x2) > 0,
+        "zones": zones
     }
 
     status["batteryStatus"] = battery_status_for(payload)

@@ -42,11 +42,17 @@ class AmtCoordinator(DataUpdateCoordinator):
           LOGGER.info(f"AMT-8000 new state: {status}")
           self.isec_client.close()
 
-          self.stored_status = status
+          # Create a data structure that includes zones
+          data = {
+              "status": status,
+              "zones": status.get("zones", {})
+          }
+
+          self.stored_status = data
           self.attemt = 0
           self.next_update = datetime.now()
 
-          return status
+          return data
         except Exception as e:
           print(f"Coordinator update error: {e}")
           seconds = 2 ** self.attemt
