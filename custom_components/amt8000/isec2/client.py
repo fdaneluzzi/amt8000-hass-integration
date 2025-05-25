@@ -74,28 +74,28 @@ def build_status(data):
             zone_status = "normal"
             
             # Check for different types of zone problems
-            # Bit 0: Zone open/closed (0 = closed, 1 = open)
-            # Bit 1: Zone tamper (0 = normal, 1 = tamper)
-            # Bit 2: Zone bypassed (0 = normal, 1 = bypassed)
-            # Bit 3: Zone low battery (0 = normal, 1 = low battery)
-            # Bit 4: Zone communication failure (0 = normal, 1 = failure)
-            # Bit 5: Zone triggered (0 = normal, 1 = triggered)
+            # Bit 0: Zone open/closed (1 = closed, 0 = open)
+            # Bit 1: Zone tamper (1 = normal, 0 = tamper)
+            # Bit 2: Zone bypassed (1 = normal, 0 = bypassed)
+            # Bit 3: Zone low battery (1 = normal, 0 = low battery)
+            # Bit 4: Zone communication failure (1 = normal, 0 = failure)
+            # Bit 5: Zone triggered (1 = normal, 0 = triggered)
             
             problems = []
             
             # Primeiro verifica se está disparado (mais crítico)
-            if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
+            if (zone_byte & 0x20) == 0:  # Bit 5: Zone triggered
                 problems.append("triggered")
             # Depois verifica outros problemas
-            elif (zone_byte & 0x01) > 0:  # Bit 0: Zone open
+            elif (zone_byte & 0x01) == 0:  # Bit 0: Zone open
                 problems.append("open")
-            elif (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
+            elif (zone_byte & 0x02) == 0:  # Bit 1: Zone tamper
                 problems.append("tamper")
-            elif (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
+            elif (zone_byte & 0x04) == 0:  # Bit 2: Zone bypassed
                 problems.append("bypassed")
-            elif (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
+            elif (zone_byte & 0x08) == 0:  # Bit 3: Zone low battery
                 problems.append("low_battery")
-            elif (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
+            elif (zone_byte & 0x10) == 0:  # Bit 4: Zone communication failure
                 problems.append("comm_failure")
                 
             # If there are any problems, join them with a comma
