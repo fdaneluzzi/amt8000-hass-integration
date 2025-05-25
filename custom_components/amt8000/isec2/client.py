@@ -42,7 +42,23 @@ def build_status(data):
     zones = {}
     for i in range(8):  # AMT-8000 has 8 zones
         zone_byte = payload[21 + i]  # Zones status starts at byte 21
-        zones[str(i + 1)] = "triggered" if (zone_byte & 0x01) > 0 else "normal"
+        zone_status = "normal"
+        
+        # Check for different types of zone problems
+        if (zone_byte & 0x01) > 0:  # Bit 0: Zone triggered
+            zone_status = "triggered"
+        elif (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
+            zone_status = "tamper"
+        elif (zone_byte & 0x04) > 0:  # Bit 2: Zone open
+            zone_status = "open"
+        elif (zone_byte & 0x08) > 0:  # Bit 3: Zone bypassed
+            zone_status = "bypassed"
+        elif (zone_byte & 0x10) > 0:  # Bit 4: Zone low battery
+            zone_status = "low_battery"
+        elif (zone_byte & 0x20) > 0:  # Bit 5: Zone communication failure
+            zone_status = "comm_failure"
+            
+        zones[str(i + 1)] = zone_status
 
     status = {
         "model": model,

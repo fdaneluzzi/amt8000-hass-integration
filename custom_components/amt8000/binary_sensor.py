@@ -35,7 +35,6 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Representa uma zona (setor) da AMT-8000."""
 
     _attr_should_poll = False
-    _attr_device_class = BinarySensorDeviceClass.SAFETY  # use outro se preferir
 
     def __init__(self, coordinator: AmtCoordinator, zone_id: str, host: str) -> None:
         """Init."""
@@ -53,11 +52,38 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
             model="AMT-8000"
         )
 
-    # -------------------------------------------------------------- #
+    @property
+    def device_class(self) -> BinarySensorDeviceClass:
+        """Return the device class of the sensor."""
+        zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
+        
+        if zone_status == "triggered":
+            return BinarySensorDeviceClass.SAFETY
+        elif zone_status == "tamper":
+            return BinarySensorDeviceClass.TAMPER
+        elif zone_status == "open":
+            return BinarySensorDeviceClass.DOOR
+        elif zone_status == "low_battery":
+            return BinarySensorDeviceClass.BATTERY
+        elif zone_status == "comm_failure":
+            return BinarySensorDeviceClass.CONNECTIVITY
+        else:
+            return BinarySensorDeviceClass.SAFETY
+
     @property
     def is_on(self) -> bool:
-        """Retorna True quando a zona está disparada."""
-        return self.coordinator.data["zones"].get(self._zone_id) == "triggered"
+        """Return True when the zone has a problem."""
+        zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
+        return zone_status != "normal"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return the state attributes."""
+        zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
+        return {
+            "status": zone_status,
+            "zone_id": self._zone_id
+        }
 
     # O Coordinator já cuida da atualização: quando ele muda, a entidade recebe
     # async_write_ha_state() automaticamente via CoordinatorEntity.
