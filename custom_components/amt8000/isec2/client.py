@@ -64,15 +64,14 @@ def build_status(data):
     
     # Read all possible zones (AMT-8000 supports up to 64 zones)
     # Each zone status is represented by 1 byte
-    # Zones status starts at byte 21
-    max_zones = min(64, len(payload) - 21)  # Calculate how many zones we can read
+    # Zones status starts at byte 86 (22 header + 64 reserved block)
+    max_zones = min(64, len(payload) - 86)  # Calculate how many zones we can read
     
-    # Primeiro, vamos pular os primeiros 21 bytes que são o cabeçalho
-    # e começar a ler as zonas a partir do byte 22
+    # Skip header (22 bytes) and reserved block (64 bytes)
     for i in range(max_zones):
         try:
             # Calculate the correct byte position for each zone
-            zone_byte = payload[21 + i]  # Each zone has 1 byte of status
+            zone_byte = payload[86 + i]  # Each zone has 1 byte of status
             
             # Log the raw zone byte for debugging
             LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
@@ -80,26 +79,27 @@ def build_status(data):
             zone_status = "normal"
 
             # Check for different types of zone problems
-            # Bit 0: Zone open/closed (1 = open, 0 = closed)
-            # Bit 1: Zone tamper (1 = tamper, 0 = normal)
-            # Bit 2: Zone bypassed (1 = bypassed, 0 = normal)
-            # Bit 3: Zone low battery (1 = low battery, 0 = normal)
-            # Bit 4: Zone communication failure (1 = failure, 0 = normal)
-            # Bit 5: Zone triggered (1 = triggered, 0 = normal)
+            # Bit 0 (0x01): Zone open (1 = open, 0 = closed)
+            # Bit 1 (0x02): Communication failure (1 = failure, 0 = normal)
+            # Bit 2 (0x04): Zone bypassed (1 = bypassed, 0 = normal)
+            # Bit 3 (0x08): Zone low battery (1 = low battery, 0 = normal)
+            # Bit 4 (0x10): Zone tamper (1 = tamper, 0 = normal)
+            # Bit 5 (0x20): Zone triggered (1 = triggered, 0 = normal)
+            # Bits 6-7: Not used (always 0)
             
             problems = []
             
             # Verifica todos os problemas ativos
             if (zone_byte & 0x01) > 0:  # Bit 0: Zone open
                 problems.append("open")
-            if (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
-                problems.append("tamper")
+            if (zone_byte & 0x02) > 0:  # Bit 1: Communication failure
+                problems.append("comm_failure")
             if (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
                 problems.append("bypassed")
             if (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
                 problems.append("low_battery")
-            if (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
-                problems.append("comm_failure")
+            if (zone_byte & 0x10) > 0:  # Bit 4: Zone tamper
+                problems.append("tamper")
             if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
                 problems.append("triggered")
                 
