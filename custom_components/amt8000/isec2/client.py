@@ -36,8 +36,16 @@ def calculate_checksum(buffer):
 
 def build_status(data):
     """Build the amt-8000 status from a given array of bytes."""
+    # Log the raw data for debugging
+    LOGGER.debug("Raw data: %s", [hex(x) for x in data])
+    
+    # The first 8 bytes are the header
+    # Bytes 4-5 contain the length
     length = merge_octets(data[4:6]) - 2
     payload = data[8 : 8 + length]
+    
+    # Log the payload for debugging
+    LOGGER.debug("Payload: %s", [hex(x) for x in payload])
 
     model = "AMT-8000" if payload[0] == 1 else "Unknown"
 
@@ -46,13 +54,13 @@ def build_status(data):
     
     # Read all possible zones (AMT-8000 supports up to 64 zones)
     # Each zone status is represented by 1 byte
-    # Zones status starts at byte 22
-    max_zones = min(64, len(payload) - 22)  # Calculate how many zones we can read
+    # Zones status starts at byte 21
+    max_zones = min(64, len(payload) - 21)  # Calculate how many zones we can read
     
     for i in range(max_zones):
         try:
             # Calculate the correct byte position for each zone
-            zone_byte = payload[22 + i]  # Each zone has 1 byte of status
+            zone_byte = payload[21 + i]  # Each zone has 1 byte of status
             
             # Log the raw zone byte for debugging
             LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
