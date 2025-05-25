@@ -11,14 +11,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import AMTCoordinator
+from .coordinator import AmtCoordinator
 
 # ---------------------------- setup --------------------------------- #
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> None:
     """Add a binary_sensor entity per zone."""
-    coordinator: AMTCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: AmtCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     # Se ainda não houver dados (p.ex. logo após reboot), espere 1ª atualização
     await coordinator.async_config_entry_first_refresh()
