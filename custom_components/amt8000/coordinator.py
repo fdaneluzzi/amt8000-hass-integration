@@ -6,7 +6,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 from homeassistant.core import HomeAssistant
 
-from .isec2.client import Client as ISecClient
+from .isec2.client import Client as ISecClient, CommunicationError
 
 import logging
 
@@ -90,6 +90,9 @@ class AmtCoordinator(DataUpdateCoordinator):
 
         finally:
             try:
-                self.client.close()
+                if hasattr(self.client, 'client') and self.client.client is not None:
+                    self.client.close()
+            except CommunicationError:
+                LOGGER.debug("Client already disconnected")
             except Exception as e:
                 LOGGER.debug("Error closing client connection: %s", str(e))
