@@ -31,7 +31,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = data["coordinator"]
 
     isec_client = ISecClient(config["host"], config["port"])
-    async_add_entities([AMTAlarmControlPanel(coordinator, isec_client)])
+    async_add_entities([AmtAlarmPanel(coordinator, isec_client, config["password"])])
 
 
 class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
