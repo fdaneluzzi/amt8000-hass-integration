@@ -57,18 +57,24 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
         """Return the device class of the sensor."""
         zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
         
-        if zone_status == "triggered":
-            return BinarySensorDeviceClass.SAFETY
-        elif zone_status == "tamper":
-            return BinarySensorDeviceClass.TAMPER
-        elif zone_status == "open":
-            return BinarySensorDeviceClass.DOOR
-        elif zone_status == "low_battery":
-            return BinarySensorDeviceClass.BATTERY
-        elif zone_status == "comm_failure":
-            return BinarySensorDeviceClass.CONNECTIVITY
-        else:
-            return BinarySensorDeviceClass.SAFETY
+        # If there are multiple problems, prioritize the most critical one
+        if isinstance(zone_status, str):
+            problems = zone_status.split(",")
+            
+            if "triggered" in problems:
+                return BinarySensorDeviceClass.SAFETY
+            elif "tamper" in problems:
+                return BinarySensorDeviceClass.TAMPER
+            elif "open" in problems:
+                return BinarySensorDeviceClass.DOOR
+            elif "low_battery" in problems:
+                return BinarySensorDeviceClass.BATTERY
+            elif "comm_failure" in problems:
+                return BinarySensorDeviceClass.CONNECTIVITY
+            elif "bypassed" in problems:
+                return BinarySensorDeviceClass.SAFETY
+                
+        return BinarySensorDeviceClass.SAFETY
 
     @property
     def is_on(self) -> bool:
@@ -77,11 +83,46 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return zone_status != "normal"
 
     @property
+    def state(self) -> str:
+        """Return the state of the sensor for automations."""
+        zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
+        
+        if zone_status == "normal":
+            return "seguro"
+            
+        # If there are multiple problems, return the most critical one
+        if isinstance(zone_status, str):
+            problems = zone_status.split(",")
+            
+            if "triggered" in problems:
+                return "disparado"
+            elif "tamper" in problems:
+                return "violado"
+            elif "open" in problems:
+                return "aberto"
+            elif "low_battery" in problems:
+                return "bateria_fraca"
+            elif "comm_failure" in problems:
+                return "falha_comunicacao"
+            elif "bypassed" in problems:
+                return "ignorado"
+                
+        return "inseguro"
+
+    @property
     def extra_state_attributes(self) -> dict:
         """Return the state attributes."""
         zone_status = self.coordinator.data["zones"].get(self._zone_id, "normal")
+        
+        # Convert comma-separated status to list for better UI display
+        if isinstance(zone_status, str) and "," in zone_status:
+            problems = zone_status.split(",")
+        else:
+            problems = [zone_status]
+            
         return {
             "status": zone_status,
+            "problems": problems,
             "zone_id": self._zone_id
         }
 
