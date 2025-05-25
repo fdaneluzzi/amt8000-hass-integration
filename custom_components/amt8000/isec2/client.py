@@ -384,20 +384,27 @@ class Client:
         data = self.client.recv(1024)
         return_data.extend(data)
 
+        # Log the raw response for debugging
+        LOGGER.debug("Paired sensors raw response: %s", [hex(x) for x in return_data])
+
         # The response starts at byte 8 (after header)
-        # Each zone is represented by 1 byte
-        # 0 = zone not paired, 1 = zone paired
+        # Each byte represents 8 zones (1 bit per zone)
         paired_zones = {}
         try:
             # Skip header (8 bytes) and read zone status
-            for i in range(64):  # AMT-8000 supports up to 64 zones
-                if len(return_data) > 8 + i:
-                    zone_status = return_data[8 + i]
-                    if zone_status == 1:  # Zone is paired
-                        paired_zones[str(i + 1)] = True
+            for byte_index in range(8):  # 8 bytes = 64 zones
+                if len(return_data) > 8 + byte_index:
+                    byte_value = return_data[8 + byte_index]
+                    # Check each bit in the byte
+                    for bit in range(8):
+                        zone_number = (byte_index * 8) + bit + 1
+                        if (byte_value & (1 << bit)) > 0:  # If bit is set, zone is paired
+                            paired_zones[str(zone_number)] = True
+                            LOGGER.debug("Zone %d is paired", zone_number)
         except Exception as e:
             LOGGER.error("Error reading paired sensors: %s", str(e))
             return None
 
+        LOGGER.debug("Found paired zones: %s", paired_zones)
         return paired_zones
 
