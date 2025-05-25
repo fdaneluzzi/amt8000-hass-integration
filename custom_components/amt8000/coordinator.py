@@ -31,6 +31,8 @@ class AmtCoordinator(DataUpdateCoordinator):
         self.stored_status = None
         self.attempt = 0
         self.last_log_time = datetime.now()
+        # Set coordinator logger to INFO level to suppress debug logs
+        LOGGER.setLevel(logging.INFO)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from AMT-8000."""
