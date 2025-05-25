@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.const import STATE_ON, STATE_OFF
 
 from .const import DOMAIN
 from .coordinator import AmtCoordinator
@@ -35,6 +36,16 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Representa uma zona (setor) da AMT-8000."""
 
     _attr_should_poll = False
+    _attr_state_options = [
+        "seguro",
+        "disparado",
+        "violado",
+        "aberto",
+        "bateria_fraca",
+        "falha_comunicacao",
+        "ignorado",
+        "inseguro"
+    ]
 
     def __init__(self, coordinator: AmtCoordinator, zone_id: str, host: str) -> None:
         """Init."""
@@ -123,7 +134,8 @@ class AMTZoneBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return {
             "status": zone_status,
             "problems": problems,
-            "zone_id": self._zone_id
+            "zone_id": self._zone_id,
+            "state": self.state
         }
 
     # O Coordinator já cuida da atualização: quando ele muda, a entidade recebe
