@@ -68,10 +68,14 @@ class AmtCoordinator(DataUpdateCoordinator):
                 "zones": {},
             }
 
-            # Add all paired zones to the status, even if they don't have problems
-            for zone_id in self.paired_zones:
-                zone_status = status.get("zones", {}).get(zone_id, "normal")
+            # First, add all zones with problems
+            for zone_id, zone_status in status.get("zones", {}).items():
                 processed_data["zones"][zone_id] = zone_status
+
+            # Then, add all paired zones that don't have problems
+            for zone_id in self.paired_zones:
+                if zone_id not in processed_data["zones"]:
+                    processed_data["zones"][zone_id] = "normal"
 
             LOGGER.debug("Processed data structure: %s", processed_data)
             self.stored_status = processed_data
