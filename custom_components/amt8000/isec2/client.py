@@ -47,6 +47,12 @@ def build_status(data):
     # Log the payload for debugging
     LOGGER.debug("Payload: %s", [hex(x) for x in payload])
     LOGGER.debug("Payload length: %d", len(payload))
+    
+    # Verifica se o payload tem o tamanho mínimo necessário
+    if len(payload) < 22:
+        LOGGER.error("Payload too short: %d bytes", len(payload))
+        return None
+        
     LOGGER.debug("Payload[0]: 0x%02x", payload[0])
     LOGGER.debug("Payload[20]: 0x%02x", payload[20])
 
@@ -74,29 +80,28 @@ def build_status(data):
             zone_status = "normal"
             
             # Check for different types of zone problems
-            # Bit 0: Zone open/closed (1 = closed, 0 = open)
-            # Bit 1: Zone tamper (1 = normal, 0 = tamper)
-            # Bit 2: Zone bypassed (1 = normal, 0 = bypassed)
-            # Bit 3: Zone low battery (1 = normal, 0 = low battery)
-            # Bit 4: Zone communication failure (1 = normal, 0 = failure)
-            # Bit 5: Zone triggered (1 = normal, 0 = triggered)
+            # Bit 0: Zone open/closed (0 = closed, 1 = open)
+            # Bit 1: Zone tamper (0 = normal, 1 = tamper)
+            # Bit 2: Zone bypassed (0 = normal, 1 = bypassed)
+            # Bit 3: Zone low battery (0 = normal, 1 = low battery)
+            # Bit 4: Zone communication failure (0 = normal, 1 = failure)
+            # Bit 5: Zone triggered (0 = normal, 1 = triggered)
             
             problems = []
             
-            # Primeiro verifica se está disparado (mais crítico)
-            if (zone_byte & 0x20) == 0:  # Bit 5: Zone triggered
+            # Verifica os problemas na ordem de prioridade
+            if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered (mais crítico)
                 problems.append("triggered")
-            # Depois verifica outros problemas
-            elif (zone_byte & 0x01) == 0:  # Bit 0: Zone open
-                problems.append("open")
-            elif (zone_byte & 0x02) == 0:  # Bit 1: Zone tamper
-                problems.append("tamper")
-            elif (zone_byte & 0x04) == 0:  # Bit 2: Zone bypassed
-                problems.append("bypassed")
-            elif (zone_byte & 0x08) == 0:  # Bit 3: Zone low battery
-                problems.append("low_battery")
-            elif (zone_byte & 0x10) == 0:  # Bit 4: Zone communication failure
+            elif (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
                 problems.append("comm_failure")
+            elif (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
+                problems.append("low_battery")
+            elif (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
+                problems.append("bypassed")
+            elif (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
+                problems.append("tamper")
+            elif (zone_byte & 0x01) > 0:  # Bit 0: Zone open
+                problems.append("open")
                 
             # If there are any problems, join them with a comma
             if problems:
@@ -121,8 +126,18 @@ def build_status(data):
             "zones": zones
         }
 
-        status["batteryStatus"] = battery_status_for(payload)
-        status["tamper"] = (payload[71] & (1 << 0x01)) > 0
+        # Verifica se o payload tem o tamanho necessário para ler o status da bateria e tamper
+        if len(payload) >= 135:
+            status["batteryStatus"] = battery_status_for(payload)
+        else:
+            status["batteryStatus"] = "unknown"
+            LOGGER.warning("Payload too short to read battery status")
+            
+        if len(payload) >= 72:
+            status["tamper"] = (payload[71] & (1 << 0x01)) > 0
+        else:
+            status["tamper"] = False
+            LOGGER.warning("Payload too short to read tamper status")
 
         return status
     except Exception as e:
