@@ -7,6 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.alarm_control_panel import AlarmControlPanelEntity, AlarmControlPanelEntityFeature
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -31,7 +32,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = data["coordinator"]
 
     isec_client = ISecClient(config["host"], config["port"])
-    async_add_entities([AmtAlarmPanel(coordinator, isec_client, config["password"])])
+    async_add_entities([AmtAlarmPanel(coordinator, isec_client, config["password"], config["host"])])
 
 
 class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
@@ -44,13 +45,21 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
         | AlarmControlPanelEntityFeature.TRIGGER
     )
 
-    def __init__(self, coordinator, isec_client: ISecClient, password):
+    def __init__(self, coordinator, isec_client: ISecClient, password: str, host: str):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.status = None
         self.isec_client = isec_client
         self.password = password
         self._is_on = False
+        
+        # Set device info
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"amt8000_{host}")},
+            name="AMT-8000",
+            manufacturer="Intelbras",
+            model="AMT-8000"
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -66,7 +75,7 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
     @property
     def unique_id(self) -> str | None:
         """Return a unique ID."""
-        return "amt8000.control_panel"
+        return f"amt8000_{self.isec_client.host}_control_panel"
 
     @property
     def available(self) -> bool:
