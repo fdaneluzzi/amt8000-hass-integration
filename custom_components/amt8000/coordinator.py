@@ -32,6 +32,7 @@ class AmtCoordinator(DataUpdateCoordinator):
         self.attemt += 1
 
         if(datetime.now() < self.next_update):
+           LOGGER.debug("Using stored status: %s", self.stored_status)
            return self.stored_status
 
         try:
@@ -39,7 +40,7 @@ class AmtCoordinator(DataUpdateCoordinator):
           self.isec_client.connect()
           self.isec_client.auth(self.password)
           status = self.isec_client.status()
-          LOGGER.info(f"AMT-8000 new state: {status}")
+          LOGGER.debug("Raw status from ISec client: %s", status)
           self.isec_client.close()
 
           # Create a data structure that includes zones
@@ -55,17 +56,19 @@ class AmtCoordinator(DataUpdateCoordinator):
               "zones": status.get("zones", {})
           }
 
+          LOGGER.debug("Processed data structure: %s", data)
           self.stored_status = data
           self.attemt = 0
           self.next_update = datetime.now()
 
           return data
         except Exception as e:
-          print(f"Coordinator update error: {e}")
+          LOGGER.error("Coordinator update error: %s", str(e))
           seconds = 2 ** self.attemt
           time_difference = timedelta(seconds=seconds)
           self.next_update = datetime.now() + time_difference
-          print(f"Next retry after {self.next_update}")
+          LOGGER.info("Next retry after %s", self.next_update)
+          return self.stored_status
 
         finally:
            self.isec_client.close()

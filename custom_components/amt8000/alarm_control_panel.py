@@ -65,6 +65,7 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
     def _handle_coordinator_update(self) -> None:
         """Update the stored value on coordinator updates."""
         self.status = self.coordinator.data
+        LOGGER.debug("Received coordinator update: %s", self.status)
         self.async_write_ha_state()
 
     @property
@@ -86,20 +87,38 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
     def state(self) -> str:
         """Return the state of the entity."""
         if self.status is None:
+            LOGGER.debug("Status is None")
             return "unknown"
 
-        status_data = self.status.get("status", {})
-        if not status_data:
+        try:
+            status_data = self.status.get("status", {})
+            LOGGER.debug("Status data: %s", status_data)
+
+            if not status_data:
+                LOGGER.debug("Status data is empty")
+                return "unknown"
+
+            # Check if alarm is triggered
+            if status_data.get("siren", False):
+                LOGGER.debug("Alarm is triggered")
+                return "triggered"
+
+            # Get alarm status
+            alarm_status = status_data.get("status", "unknown")
+            LOGGER.debug("Alarm status: %s", alarm_status)
+
+            if alarm_status.startswith("armed_"):
+                self._is_on = True
+                LOGGER.debug("Alarm is armed")
+            else:
+                self._is_on = False
+                LOGGER.debug("Alarm is not armed")
+
+            return alarm_status
+
+        except Exception as e:
+            LOGGER.error("Error getting state: %s", str(e))
             return "unknown"
-
-        if status_data.get('siren') == True:
-            return "triggered"
-
-        alarm_status = status_data.get("status", "unknown")
-        if alarm_status.startswith("armed_"):
-            self._is_on = True
-
-        return alarm_status
 
     def _arm_away(self):
         """Arm AMT in away mode"""
