@@ -16,6 +16,9 @@ commands = {
     "panic": [0x40, 0x1a]
 }
 
+ZONE_START = 64      # primeiro byte de zona dentro do payload
+MAX_ZONES   = 64
+
 def split_into_octets(n):
    if 0 <= n <= 0xFFFF:
        high_byte = (n >> 8) & 0xFF
@@ -65,13 +68,13 @@ def build_status(data):
     # Read all possible zones (AMT-8000 supports up to 64 zones)
     # Each zone status is represented by 1 byte
     # Zones status starts at byte 86 (22 header + 64 reserved block)
-    max_zones = min(64, len(payload) - 86)  # Calculate how many zones we can read
+    max_zones = min(64, len(payload) - 86)  # Calculate how many zones we can readmin(MAX_ZONES, len(payload) - ZONE_START)
     
     # Skip header (22 bytes) and reserved block (64 bytes)
     for i in range(max_zones):
         try:
             # Calculate the correct byte position for each zone
-            zone_byte = payload[86 + i]  # Each zone has 1 byte of status
+            zone_byte = payload[84 + i]  # Each zone has 1 byte of status
             
             # Log the raw zone byte for debugging
             LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
