@@ -68,7 +68,7 @@ def build_status(data):
     # Read all possible zones (AMT-8000 supports up to 64 zones)
     # Each zone status is represented by 1 byte
     # Zones status starts at byte 86 (22 header + 64 reserved block)
-    max_zones = min(64, len(payload) - 86)  # Calculate how many zones we can readmin(MAX_ZONES, len(payload) - ZONE_START)
+    max_zones = min(64, len(payload) - 84)  # Calculate how many zones we can readmin(MAX_ZONES, len(payload) - ZONE_START)
     
     # Skip header (22 bytes) and reserved block (64 bytes)
     for i in range(max_zones):
