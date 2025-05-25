@@ -213,10 +213,16 @@ class Client:
     def close(self):
         """Close a connection."""
         if self.client is None:
-            raise CommunicationError("Client not connected. Call Client.connect")
+            LOGGER.debug("Client not connected, nothing to close")
+            return
 
-        self.client.close()
-        self.client.detach()
+        try:
+            self.client.close()
+            self.client.detach()
+        except Exception as e:
+            LOGGER.debug("Error closing client connection: %s", str(e))
+        finally:
+            self.client = None
 
     def connect(self):
         """Create a new connection."""
