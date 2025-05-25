@@ -72,7 +72,7 @@ def build_status(data):
             
             # Check for different types of zone problems
             if (zone_byte & 0x01) > 0:  # Bit 0: Zone open
-                problems.append("open")
+                problems.append("open_triggered")
             if (zone_byte & 0x02) > 0:  # Bit 1: Communication failure
                 problems.append("comm_failure")
             if (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
@@ -82,7 +82,7 @@ def build_status(data):
             if (zone_byte & 0x10) > 0:  # Bit 4: Zone tamper
                 problems.append("tamper")
             if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
-                problems.append("triggered")
+                problems.append("memory_triggered")
                 
             # If there are any problems, join them with a comma
             if problems:

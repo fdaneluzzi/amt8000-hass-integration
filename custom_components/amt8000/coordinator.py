@@ -40,11 +40,6 @@ class AmtCoordinator(DataUpdateCoordinator):
            return self.stored_status
 
         try:
-            # Only log every 5 seconds to reduce log spam
-            if (datetime.now() - self.last_log_time).total_seconds() >= 5:
-                LOGGER.info("retrieving amt-8000 updated status...")
-                self.last_log_time = datetime.now()
-
             self.client.connect()
             self.client.auth(self.password)
             status = self.client.status()
