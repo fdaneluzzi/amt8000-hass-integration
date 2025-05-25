@@ -88,7 +88,7 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
         return self.status is not None
 
     @property
-    def state(self) -> AlarmControlPanelState:
+    def alarm_state(self) -> AlarmControlPanelState:
         """Return the state of the entity."""
         if self.status is None:
             LOGGER.debug("Status is None")
