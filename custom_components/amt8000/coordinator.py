@@ -1,8 +1,10 @@
 from datetime import timedelta, datetime
+from typing import Any
 
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
+from homeassistant.core import HomeAssistant
 
 from .isec2.client import Client as ISecClient
 
@@ -13,22 +15,24 @@ LOGGER = logging.getLogger(__name__)
 class AmtCoordinator(DataUpdateCoordinator):
     """Coordinate the amt status update."""
 
-    def __init__(self, hass, isec_client: ISecClient, password):
-        """Initialize my coordinator."""
+    def __init__(self, hass: HomeAssistant, client: ISecClient, password) -> None:
+        """Initialize the coordinator."""
         super().__init__(
             hass,
             LOGGER,
             name="AMT-8000 Data Polling",
-            update_interval=timedelta(seconds=10),
+            update_interval=timedelta(seconds=1),
         )
-        self.isec_client = isec_client
+        self.client = client
         self.password = password
+        self.data = {}
+        self.paired_zones = {}  # Store paired zones information
         self.next_update = datetime.now()
         self.stored_status = None
         self.attemt = 0
 
-    async def _async_update_data(self):
-        """Retrieve the current status."""
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch data from AMT-8000."""
         self.attemt += 1
 
         if(datetime.now() < self.next_update):
@@ -36,39 +40,53 @@ class AmtCoordinator(DataUpdateCoordinator):
            return self.stored_status
 
         try:
-          LOGGER.info("retrieving amt-8000 updated status...")
-          self.isec_client.connect()
-          self.isec_client.auth(self.password)
-          status = self.isec_client.status()
-          LOGGER.debug("Raw status from ISec client: %s", status)
-          self.isec_client.close()
+            _LOGGER.info("retrieving amt-8000 updated status...")
+            self.client.connect()
+            self.client.auth(self.password)
+            status = self.client.status()
+            
+            # Get paired sensors list if we don't have it yet
+            if not self.paired_zones:
+                self.paired_zones = self.client.get_paired_sensors()
+                _LOGGER.debug("Paired zones: %s", self.paired_zones)
 
-          # Create a data structure that includes zones
-          data = {
-              "status": {
-                  "siren": status.get("siren", False),
-                  "status": status.get("status", "unknown"),
-                  "zonesFiring": status.get("zonesFiring", False),
-                  "zonesClosed": status.get("zonesClosed", False),
-                  "batteryStatus": status.get("batteryStatus", "unknown"),
-                  "tamper": status.get("tamper", False)
-              },
-              "zones": status.get("zones", {})
-          }
+            if status is None:
+                return None
 
-          LOGGER.debug("Processed data structure: %s", data)
-          self.stored_status = data
-          self.attemt = 0
-          self.next_update = datetime.now()
+            _LOGGER.debug("Raw status from ISec client: %s", status)
 
-          return data
-        except Exception as e:
-          LOGGER.error("Coordinator update error: %s", str(e))
-          seconds = 2 ** self.attemt
-          time_difference = timedelta(seconds=seconds)
-          self.next_update = datetime.now() + time_difference
-          LOGGER.info("Next retry after %s", self.next_update)
-          return self.stored_status
+            # Process the data
+            processed_data = {
+                "status": {
+                    "siren": status.get("siren", False),
+                    "status": status.get("status", "unknown"),
+                    "zonesFiring": status.get("zonesFiring", False),
+                    "zonesClosed": status.get("zonesClosed", False),
+                    "batteryStatus": status.get("batteryStatus", "unknown"),
+                    "tamper": status.get("tamper", False),
+                },
+                "zones": {},
+            }
+
+            # Add all paired zones to the status, even if they don't have problems
+            for zone_id in self.paired_zones:
+                zone_status = status.get("zones", {}).get(zone_id, "normal")
+                processed_data["zones"][zone_id] = zone_status
+
+            _LOGGER.debug("Processed data structure: %s", processed_data)
+            self.stored_status = processed_data
+            self.attemt = 0
+            self.next_update = datetime.now()
+
+            return processed_data
+
+        except Exception as err:
+            _LOGGER.error("Error fetching AMT-8000 data: %s", err)
+            seconds = 2 ** self.attemt
+            time_difference = timedelta(seconds=seconds)
+            self.next_update = datetime.now() + time_difference
+            _LOGGER.info("Next retry after %s", self.next_update)
+            return self.stored_status
 
         finally:
-           self.isec_client.close()
+           self.client.close()

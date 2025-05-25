@@ -13,7 +13,8 @@ commands = {
     "auth": [0xF0, 0xF0],
     "status": [0x0B, 0x4A],
     "arm_disarm": [0x40, 0x1e],
-    "panic": [0x40, 0x1a]
+    "panic": [0x40, 0x1a],
+    "paired_sensors": [0x0B, 0x01]  # New command to get paired sensors list
 }
 
 ZONE_START = 64      # primeiro byte de zona dentro do payload
@@ -360,4 +361,37 @@ class Client:
             return 'triggered'
 
         return 'not_triggered'
+
+    def get_paired_sensors(self):
+        """Get the list of paired sensors from the alarm panel."""
+        if self.client is None:
+            raise CommunicationError("Client not connected. Call Client.connect")
+
+        length = [0x00, 0x02]
+        sensors_data = dst_id + our_id + length + commands["paired_sensors"]
+        cs = calculate_checksum(sensors_data)
+        payload = bytes(sensors_data + [cs])
+
+        return_data = bytearray()
+        self.client.send(payload)
+
+        data = self.client.recv(1024)
+        return_data.extend(data)
+
+        # The response starts at byte 8 (after header)
+        # Each zone is represented by 1 byte
+        # 0 = zone not paired, 1 = zone paired
+        paired_zones = {}
+        try:
+            # Skip header (8 bytes) and read zone status
+            for i in range(64):  # AMT-8000 supports up to 64 zones
+                if len(return_data) > 8 + i:
+                    zone_status = return_data[8 + i]
+                    if zone_status == 1:  # Zone is paired
+                        paired_zones[str(i + 1)] = True
+        except Exception as e:
+            LOGGER.error("Error reading paired sensors: %s", str(e))
+            return None
+
+        return paired_zones
 
