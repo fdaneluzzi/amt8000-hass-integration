@@ -89,19 +89,19 @@ def build_status(data):
             
             problems = []
             
-            # Verifica os problemas na ordem de prioridade
-            if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered (mais crítico)
-                problems.append("triggered")
-            elif (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
-                problems.append("comm_failure")
-            elif (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
-                problems.append("low_battery")
-            elif (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
-                problems.append("bypassed")
-            elif (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
-                problems.append("tamper")
-            elif (zone_byte & 0x01) > 0:  # Bit 0: Zone open
+            # Verifica todos os problemas ativos
+            if (zone_byte & 0x01) > 0:  # Bit 0: Zone open
                 problems.append("open")
+            if (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
+                problems.append("tamper")
+            if (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
+                problems.append("bypassed")
+            if (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
+                problems.append("low_battery")
+            if (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
+                problems.append("comm_failure")
+            if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
+                problems.append("triggered")
                 
             # If there are any problems, join them with a comma
             if problems:
