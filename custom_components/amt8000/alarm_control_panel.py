@@ -63,10 +63,26 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
         )
 
     @callback
-    def _handle_coordinator_update(self) -> None:
-        """Update the stored value on coordinator updates."""
-        self.status = self.coordinator.data
-        LOGGER.debug("Received coordinator update: %s", self.status)
+    async def _async_handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data is None:
+            return
+
+        # Only log if there are significant changes
+        if self._state != self.coordinator.data["status"]["status"] or \
+           self._attr_siren != self.coordinator.data["status"]["siren"] or \
+           self._attr_zones_firing != self.coordinator.data["status"]["zonesFiring"] or \
+           self._attr_zones_closed != self.coordinator.data["status"]["zonesClosed"] or \
+           self._attr_battery_status != self.coordinator.data["status"]["batteryStatus"] or \
+           self._attr_tamper != self.coordinator.data["status"]["tamper"]:
+            LOGGER.debug("Received coordinator update: %s", self.coordinator.data)
+
+        self._state = self.coordinator.data["status"]["status"]
+        self._attr_siren = self.coordinator.data["status"]["siren"]
+        self._attr_zones_firing = self.coordinator.data["status"]["zonesFiring"]
+        self._attr_zones_closed = self.coordinator.data["status"]["zonesClosed"]
+        self._attr_battery_status = self.coordinator.data["status"]["batteryStatus"]
+        self._attr_tamper = self.coordinator.data["status"]["tamper"]
         self.async_write_ha_state()
 
     @property

@@ -21,7 +21,7 @@ class AmtCoordinator(DataUpdateCoordinator):
             hass,
             LOGGER,
             name="AMT-8000 Data Polling",
-            update_interval=timedelta(seconds=1),
+            update_interval=timedelta(seconds=5),
         )
         self.client = client
         self.password = password
