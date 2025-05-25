@@ -14,19 +14,20 @@ from .const import DOMAIN
 from .coordinator import AmtCoordinator
 
 # ---------------------------- setup --------------------------------- #
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-) -> None:
-    """Add a binary_sensor entity per zone."""
-    coordinator: AmtCoordinator = hass.data[DOMAIN][entry.entry_id]
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Adicionar um binary_sensor por zona."""
+    data = hass.data[DOMAIN][entry.entry_id]
 
-    # Se ainda não houver dados (p.ex. logo após reboot), espere 1ª atualização
-    await coordinator.async_config_entry_first_refresh()
+    coordinator: AmtCoordinator = (
+        data["coordinator"] if isinstance(data, dict) else data
+    )
 
-    entities: list[BinarySensorEntity] = [
+    await coordinator.async_request_refresh()
+
+    entities = [
         AMTZoneBinarySensor(coordinator, zone_id)
-        for zone_id in coordinator.data.get("zones", {}).keys()
-    ]
+        for zone_id in coordinator.data["zones"].keys()
+    ]   
     async_add_entities(entities)
 
 
