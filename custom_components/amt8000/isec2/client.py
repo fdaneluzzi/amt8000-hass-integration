@@ -50,7 +50,8 @@ def build_status(data):
     LOGGER.debug("Payload[0]: 0x%02x", payload[0])
     LOGGER.debug("Payload[20]: 0x%02x", payload[20])
 
-    model = "AMT-8000" if payload[0] == 1 else "Unknown"
+    # O modelo é AMT-8000 se o byte 0 for 0x8b
+    model = "AMT-8000" if payload[0] == 0x8b else "Unknown"
 
     # Get individual zone status from payload
     zones = {}
@@ -60,10 +61,12 @@ def build_status(data):
     # Zones status starts at byte 21
     max_zones = min(64, len(payload) - 21)  # Calculate how many zones we can read
     
+    # Primeiro, vamos pular os primeiros 21 bytes que são o cabeçalho
+    # e começar a ler as zonas a partir do byte 22
     for i in range(max_zones):
         try:
             # Calculate the correct byte position for each zone
-            zone_byte = payload[21 + i]  # Each zone has 1 byte of status
+            zone_byte = payload[22 + i]  # Each zone has 1 byte of status
             
             # Log the raw zone byte for debugging
             LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
