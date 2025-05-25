@@ -46,6 +46,9 @@ def build_status(data):
     
     # Log the payload for debugging
     LOGGER.debug("Payload: %s", [hex(x) for x in payload])
+    LOGGER.debug("Payload length: %d", len(payload))
+    LOGGER.debug("Payload[0]: 0x%02x", payload[0])
+    LOGGER.debug("Payload[20]: 0x%02x", payload[20])
 
     model = "AMT-8000" if payload[0] == 1 else "Unknown"
 
