@@ -40,7 +40,7 @@ class AmtCoordinator(DataUpdateCoordinator):
            return self.stored_status
 
         try:
-            _LOGGER.info("retrieving amt-8000 updated status...")
+            LOGGER.info("retrieving amt-8000 updated status...")
             self.client.connect()
             self.client.auth(self.password)
             status = self.client.status()
@@ -48,12 +48,12 @@ class AmtCoordinator(DataUpdateCoordinator):
             # Get paired sensors list if we don't have it yet
             if not self.paired_zones:
                 self.paired_zones = self.client.get_paired_sensors()
-                _LOGGER.debug("Paired zones: %s", self.paired_zones)
+                LOGGER.debug("Paired zones: %s", self.paired_zones)
 
             if status is None:
                 return None
 
-            _LOGGER.debug("Raw status from ISec client: %s", status)
+            LOGGER.debug("Raw status from ISec client: %s", status)
 
             # Process the data
             processed_data = {
@@ -73,7 +73,7 @@ class AmtCoordinator(DataUpdateCoordinator):
                 zone_status = status.get("zones", {}).get(zone_id, "normal")
                 processed_data["zones"][zone_id] = zone_status
 
-            _LOGGER.debug("Processed data structure: %s", processed_data)
+            LOGGER.debug("Processed data structure: %s", processed_data)
             self.stored_status = processed_data
             self.attemt = 0
             self.next_update = datetime.now()
@@ -81,12 +81,15 @@ class AmtCoordinator(DataUpdateCoordinator):
             return processed_data
 
         except Exception as err:
-            _LOGGER.error("Error fetching AMT-8000 data: %s", err)
+            LOGGER.error("Error fetching AMT-8000 data: %s", err)
             seconds = 2 ** self.attemt
             time_difference = timedelta(seconds=seconds)
             self.next_update = datetime.now() + time_difference
-            _LOGGER.info("Next retry after %s", self.next_update)
+            LOGGER.info("Next retry after %s", self.next_update)
             return self.stored_status
 
         finally:
-           self.client.close()
+            try:
+                self.client.close()
+            except Exception as e:
+                LOGGER.debug("Error closing client connection: %s", str(e))
