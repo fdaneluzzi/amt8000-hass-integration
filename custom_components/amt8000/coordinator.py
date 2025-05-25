@@ -44,7 +44,14 @@ class AmtCoordinator(DataUpdateCoordinator):
 
           # Create a data structure that includes zones
           data = {
-              "status": status,
+              "status": {
+                  "siren": status.get("siren", False),
+                  "status": status.get("status", "unknown"),
+                  "zonesFiring": status.get("zonesFiring", False),
+                  "zonesClosed": status.get("zonesClosed", False),
+                  "batteryStatus": status.get("batteryStatus", "unknown"),
+                  "tamper": status.get("tamper", False)
+              },
               "zones": status.get("zones", {})
           }
 

@@ -88,13 +88,18 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
         if self.status is None:
             return "unknown"
 
-        if self.status['siren'] == True:
+        status_data = self.status.get("status", {})
+        if not status_data:
+            return "unknown"
+
+        if status_data.get('siren') == True:
             return "triggered"
 
-        if(self.status["status"].startswith("armed_")):
-          self._is_on = True
+        alarm_status = status_data.get("status", "unknown")
+        if alarm_status.startswith("armed_"):
+            self._is_on = True
 
-        return self.status["status"]
+        return alarm_status
 
     def _arm_away(self):
         """Arm AMT in away mode"""
