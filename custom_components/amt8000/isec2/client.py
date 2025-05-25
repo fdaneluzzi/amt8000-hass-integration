@@ -1,6 +1,9 @@
 """Module for amt-8000 communication."""
 
 import socket
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 timeout = 2  # Set the timeout to 2 seconds
 
@@ -40,8 +43,16 @@ def build_status(data):
 
     # Get individual zone status from payload
     zones = {}
-    for i in range(8):  # AMT-8000 has 8 zones
+    
+    # Read all possible zones (AMT-8000 supports up to 64 zones)
+    # Each zone status is represented by 1 byte
+    # Zones status starts at byte 21 and continues for 64 bytes
+    for i in range(64):
         zone_byte = payload[21 + i]  # Zones status starts at byte 21
+        
+        # Log the raw zone byte for debugging
+        LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
+        
         zone_status = "normal"
         
         # Check for different types of zone problems
@@ -72,8 +83,8 @@ def build_status(data):
         # If there are any problems, join them with a comma
         if problems:
             zone_status = ",".join(problems)
-            
-        zones[str(i + 1)] = zone_status
+            zones[str(i + 1)] = zone_status  # Zone numbers start at 1
+            LOGGER.debug("Zone %d status: %s", i+1, zone_status)
 
     status = {
         "model": model,
