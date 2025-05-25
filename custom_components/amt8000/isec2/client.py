@@ -80,27 +80,27 @@ def build_status(data):
             zone_status = "normal"
             
             # Check for different types of zone problems
-            # Bit 0: Zone open/closed (0 = closed, 1 = open)
-            # Bit 1: Zone tamper (0 = normal, 1 = tamper)
-            # Bit 2: Zone bypassed (0 = normal, 1 = bypassed)
-            # Bit 3: Zone low battery (0 = normal, 1 = low battery)
-            # Bit 4: Zone communication failure (0 = normal, 1 = failure)
-            # Bit 5: Zone triggered (0 = normal, 1 = triggered)
+            # Bit 0: Zone open/closed (1 = open, 0 = closed)
+            # Bit 1: Zone tamper (1 = tamper, 0 = normal)
+            # Bit 2: Zone bypassed (1 = bypassed, 0 = normal)
+            # Bit 3: Zone low battery (1 = low battery, 0 = normal)
+            # Bit 4: Zone communication failure (1 = failure, 0 = normal)
+            # Bit 5: Zone triggered (1 = triggered, 0 = normal)
             
             problems = []
             
             # Verifica todos os problemas ativos
-            if (zone_byte & 0x01) > 0:  # Bit 0: Zone open
+            if (zone_byte & 0x01) == 0:  # Bit 0: Zone open
                 problems.append("open")
-            if (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
+            if (zone_byte & 0x02) == 0:  # Bit 1: Zone tamper
                 problems.append("tamper")
-            if (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
+            if (zone_byte & 0x04) == 0:  # Bit 2: Zone bypassed
                 problems.append("bypassed")
-            if (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
+            if (zone_byte & 0x08) == 0:  # Bit 3: Zone low battery
                 problems.append("low_battery")
-            if (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
+            if (zone_byte & 0x10) == 0:  # Bit 4: Zone communication failure
                 problems.append("comm_failure")
-            if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
+            if (zone_byte & 0x20) == 0:  # Bit 5: Zone triggered
                 problems.append("triggered")
                 
             # If there are any problems, join them with a comma
