@@ -46,62 +46,74 @@ def build_status(data):
     
     # Read all possible zones (AMT-8000 supports up to 64 zones)
     # Each zone status is represented by 1 byte
-    # Zones status starts at byte 21 and continues for 64 bytes
-    for i in range(64):
-        # Calculate the correct byte position for each zone
-        # Each zone has 8 bytes of status information
-        zone_byte = payload[21 + (i * 8)]  # First byte of each zone's status block
-        
-        # Log the raw zone byte for debugging
-        LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
-        
-        zone_status = "normal"
-        
-        # Check for different types of zone problems
-        # Bit 0: Zone open/closed (0 = closed, 1 = open)
-        # Bit 1: Zone tamper (0 = normal, 1 = tamper)
-        # Bit 2: Zone bypassed (0 = normal, 1 = bypassed)
-        # Bit 3: Zone low battery (0 = normal, 1 = low battery)
-        # Bit 4: Zone communication failure (0 = normal, 1 = failure)
-        # Bit 5: Zone triggered (0 = normal, 1 = triggered)
-        
-        problems = []
-        
-        # Primeiro verifica se está disparado (mais crítico)
-        if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
-            problems.append("triggered")
-        # Depois verifica outros problemas
-        elif (zone_byte & 0x01) > 0:  # Bit 0: Zone open
-            problems.append("open")
-        elif (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
-            problems.append("tamper")
-        elif (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
-            problems.append("bypassed")
-        elif (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
-            problems.append("low_battery")
-        elif (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
-            problems.append("comm_failure")
+    # Zones status starts at byte 22
+    max_zones = min(64, len(payload) - 22)  # Calculate how many zones we can read
+    
+    for i in range(max_zones):
+        try:
+            # Calculate the correct byte position for each zone
+            zone_byte = payload[22 + i]  # Each zone has 1 byte of status
             
-        # If there are any problems, join them with a comma
-        if problems:
-            zone_status = ",".join(problems)
-            zones[str(i + 1)] = zone_status  # Zone numbers start at 1
-            LOGGER.debug("Zone %d status: %s", i+1, zone_status)
+            # Log the raw zone byte for debugging
+            LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
+            
+            zone_status = "normal"
+            
+            # Check for different types of zone problems
+            # Bit 0: Zone open/closed (0 = closed, 1 = open)
+            # Bit 1: Zone tamper (0 = normal, 1 = tamper)
+            # Bit 2: Zone bypassed (0 = normal, 1 = bypassed)
+            # Bit 3: Zone low battery (0 = normal, 1 = low battery)
+            # Bit 4: Zone communication failure (0 = normal, 1 = failure)
+            # Bit 5: Zone triggered (0 = normal, 1 = triggered)
+            
+            problems = []
+            
+            # Primeiro verifica se está disparado (mais crítico)
+            if (zone_byte & 0x20) > 0:  # Bit 5: Zone triggered
+                problems.append("triggered")
+            # Depois verifica outros problemas
+            elif (zone_byte & 0x01) > 0:  # Bit 0: Zone open
+                problems.append("open")
+            elif (zone_byte & 0x02) > 0:  # Bit 1: Zone tamper
+                problems.append("tamper")
+            elif (zone_byte & 0x04) > 0:  # Bit 2: Zone bypassed
+                problems.append("bypassed")
+            elif (zone_byte & 0x08) > 0:  # Bit 3: Zone low battery
+                problems.append("low_battery")
+            elif (zone_byte & 0x10) > 0:  # Bit 4: Zone communication failure
+                problems.append("comm_failure")
+                
+            # If there are any problems, join them with a comma
+            if problems:
+                zone_status = ",".join(problems)
+                zones[str(i + 1)] = zone_status  # Zone numbers start at 1
+                LOGGER.debug("Zone %d status: %s", i+1, zone_status)
+        except IndexError:
+            LOGGER.warning("Failed to read zone %d: payload too short", i+1)
+            break
+        except Exception as e:
+            LOGGER.error("Error processing zone %d: %s", i+1, str(e))
+            continue
 
-    status = {
-        "model": model,
-        "version": f"{payload[1]}.{payload[2]}.{payload[3]}",
-        "status": get_status(payload),
-        "zonesFiring": (payload[20] & 0x8) > 0,
-        "zonesClosed": (payload[20] & 0x4) > 0,
-        "siren": (payload[20] & 0x2) > 0,
-        "zones": zones
-    }
+    try:
+        status = {
+            "model": model,
+            "version": f"{payload[1]}.{payload[2]}.{payload[3]}",
+            "status": get_status(payload),
+            "zonesFiring": (payload[20] & 0x8) > 0,
+            "zonesClosed": (payload[20] & 0x4) > 0,
+            "siren": (payload[20] & 0x2) > 0,
+            "zones": zones
+        }
 
-    status["batteryStatus"] = battery_status_for(payload)
-    status["tamper"] = (payload[71] & (1 << 0x01)) > 0
+        status["batteryStatus"] = battery_status_for(payload)
+        status["tamper"] = (payload[71] & (1 << 0x01)) > 0
 
-    return status
+        return status
+    except Exception as e:
+        LOGGER.error("Error building status: %s", str(e))
+        return None
 
 
 def battery_status_for(resp):
