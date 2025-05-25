@@ -48,7 +48,9 @@ def build_status(data):
     # Each zone status is represented by 1 byte
     # Zones status starts at byte 21 and continues for 64 bytes
     for i in range(64):
-        zone_byte = payload[21 + i]  # Zones status starts at byte 21
+        # Calculate the correct byte position for each zone
+        # Each zone has 8 bytes of status information
+        zone_byte = payload[21 + (i * 8)]  # First byte of each zone's status block
         
         # Log the raw zone byte for debugging
         LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
