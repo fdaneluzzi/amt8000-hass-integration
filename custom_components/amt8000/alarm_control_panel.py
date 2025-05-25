@@ -6,7 +6,11 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.alarm_control_panel import AlarmControlPanelEntity, AlarmControlPanelEntityFeature
+from homeassistant.components.alarm_control_panel import (
+    AlarmControlPanelEntity,
+    AlarmControlPanelEntityFeature,
+    AlarmControlPanelState,
+)
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from homeassistant.helpers.update_coordinator import (
@@ -84,11 +88,11 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
         return self.status is not None
 
     @property
-    def state(self) -> str:
+    def state(self) -> AlarmControlPanelState:
         """Return the state of the entity."""
         if self.status is None:
             LOGGER.debug("Status is None")
-            return "unknown"
+            return AlarmControlPanelState.UNKNOWN
 
         try:
             status_data = self.status.get("status", {})
@@ -96,29 +100,37 @@ class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
 
             if not status_data:
                 LOGGER.debug("Status data is empty")
-                return "unknown"
+                return AlarmControlPanelState.UNKNOWN
 
             # Check if alarm is triggered
             if status_data.get("siren", False):
                 LOGGER.debug("Alarm is triggered")
-                return "triggered"
+                return AlarmControlPanelState.TRIGGERED
 
             # Get alarm status
             alarm_status = status_data.get("status", "unknown")
             LOGGER.debug("Alarm status: %s", alarm_status)
 
-            if alarm_status.startswith("armed_"):
+            if alarm_status == "armed_away":
                 self._is_on = True
-                LOGGER.debug("Alarm is armed")
+                LOGGER.debug("Alarm is armed away")
+                return AlarmControlPanelState.ARMED_AWAY
+            elif alarm_status == "partial_armed":
+                self._is_on = True
+                LOGGER.debug("Alarm is partially armed")
+                return AlarmControlPanelState.ARMED_HOME
+            elif alarm_status == "disarmed":
+                self._is_on = False
+                LOGGER.debug("Alarm is disarmed")
+                return AlarmControlPanelState.DISARMED
             else:
                 self._is_on = False
-                LOGGER.debug("Alarm is not armed")
-
-            return alarm_status
+                LOGGER.debug("Alarm is in unknown state")
+                return AlarmControlPanelState.UNKNOWN
 
         except Exception as e:
             LOGGER.error("Error getting state: %s", str(e))
-            return "unknown"
+            return AlarmControlPanelState.UNKNOWN
 
     def _arm_away(self):
         """Arm AMT in away mode"""

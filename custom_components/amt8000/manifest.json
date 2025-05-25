@@ -1,7 +1,7 @@
 {
   "domain": "amt8000",
   "name": "AMT-8000",
-  "codeowners": ["@merencia"],
+  "codeowners": ["@merencia", "@fdaneluzzi"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/merencia/amt8000-hass-integration",
