@@ -25,8 +25,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create coordinator
     coordinator = AmtCoordinator(hass, isec_client, entry.data["password"])
     
-    # Store coordinator in hass.data
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    # Store both coordinator and config data
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinator": coordinator,
+        "config": entry.data
+    }
     
     # Start the coordinator
     await coordinator.async_config_entry_first_refresh()

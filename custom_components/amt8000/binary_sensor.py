@@ -17,16 +17,13 @@ from .coordinator import AmtCoordinator
 async def async_setup_entry(hass, entry, async_add_entities):
     """Adicionar um binary_sensor por zona."""
     data = hass.data[DOMAIN][entry.entry_id]
-
-    coordinator: AmtCoordinator = (
-        data["coordinator"] if isinstance(data, dict) else data
-    )
+    coordinator = data["coordinator"]
 
     await coordinator.async_request_refresh()
 
     entities = [
         AMTZoneBinarySensor(coordinator, zone_id)
-        for zone_id in coordinator.data["zones"].keys()
+        for zone_id in coordinator.data.get("zones", {}).keys()
     ]   
     async_add_entities(entities)
 

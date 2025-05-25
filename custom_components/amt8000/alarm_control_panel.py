@@ -24,19 +24,14 @@ PARALLEL_UPDATES = 0
 SCAN_INTERVAL = timedelta(seconds=10)
 
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the entries for amt-8000."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-    isec_client = ISecClient(data["host"], data["port"])
-    coordinator = AmtCoordinator(hass, isec_client, data["password"])
-    LOGGER.info('setting up...')
-    # coordinator.async_config_entry_first_refresh()
-    sensors = [AmtAlarmPanel(coordinator, isec_client, data['password'])]
-    async_add_entities(sensors)
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the AMT-8000 alarm control panel."""
+    data = hass.data[DOMAIN][entry.entry_id]
+    config = data["config"]
+    coordinator = data["coordinator"]
+
+    isec_client = ISecClient(config["host"], config["port"])
+    async_add_entities([AMTAlarmControlPanel(coordinator, isec_client)])
 
 
 class AmtAlarmPanel(CoordinatorEntity, AlarmControlPanelEntity):
