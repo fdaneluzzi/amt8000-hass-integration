@@ -52,7 +52,8 @@ class AmtCoordinator(DataUpdateCoordinator):
             # Get paired sensors list if we don't have it yet
             if not self.paired_zones:
                 self.paired_zones = self.client.get_paired_sensors()
-                LOGGER.debug("Paired zones: %s", self.paired_zones)
+                if self.paired_zones:
+                    LOGGER.info("Found paired zones: %s", list(self.paired_zones.keys()))
 
             if status is None:
                 return None

@@ -88,9 +88,7 @@ def build_status(data):
             if problems:
                 zone_status = ",".join(problems)
                 zones[str(i + 1)] = zone_status
-                LOGGER.debug("Zone %d status: %s", i+1, zone_status)
         except IndexError:
-            LOGGER.warning("Failed to read zone %d: payload too short", i+1)
             break
         except Exception as e:
             LOGGER.error("Error processing zone %d: %s", i+1, str(e))
@@ -359,9 +357,6 @@ class Client:
         data = self.client.recv(1024)
         return_data.extend(data)
 
-        # Log the raw response for debugging
-        LOGGER.debug("Paired sensors raw response: %s", [hex(x) for x in return_data])
-
         # The response starts at byte 8 (after header)
         # Each byte represents 8 zones (1 bit per zone)
         paired_zones = {}
@@ -375,11 +370,9 @@ class Client:
                         zone_number = (byte_index * 8) + bit + 1
                         if (byte_value & (1 << bit)) > 0:  # If bit is set, zone is paired
                             paired_zones[str(zone_number)] = True
-                            LOGGER.debug("Zone %d is paired", zone_number)
         except Exception as e:
             LOGGER.error("Error reading paired sensors: %s", str(e))
             return None
 
-        LOGGER.debug("Found paired zones: %s", paired_zones)
         return paired_zones
 
