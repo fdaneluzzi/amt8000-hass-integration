@@ -29,18 +29,22 @@ class AmtCoordinator(DataUpdateCoordinator):
         self.paired_zones = {}  # Store paired zones information
         self.next_update = datetime.now()
         self.stored_status = None
-        self.attemt = 0
+        self.attempt = 0
+        self.last_log_time = datetime.now()
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from AMT-8000."""
-        self.attemt += 1
+        self.attempt += 1
 
         if(datetime.now() < self.next_update):
-           LOGGER.debug("Using stored status: %s", self.stored_status)
            return self.stored_status
 
         try:
-            LOGGER.info("retrieving amt-8000 updated status...")
+            # Only log every 5 seconds to reduce log spam
+            if (datetime.now() - self.last_log_time).total_seconds() >= 5:
+                LOGGER.info("retrieving amt-8000 updated status...")
+                self.last_log_time = datetime.now()
+
             self.client.connect()
             self.client.auth(self.password)
             status = self.client.status()
@@ -52,8 +56,6 @@ class AmtCoordinator(DataUpdateCoordinator):
 
             if status is None:
                 return None
-
-            LOGGER.debug("Raw status from ISec client: %s", status)
 
             # Process the data
             processed_data = {
@@ -68,25 +70,20 @@ class AmtCoordinator(DataUpdateCoordinator):
                 "zones": {},
             }
 
-            # First, add all zones with problems
-            for zone_id, zone_status in status.get("zones", {}).items():
+            # Only process zones that are paired
+            for zone_id in self.paired_zones:
+                zone_status = status.get("zones", {}).get(zone_id, "normal")
                 processed_data["zones"][zone_id] = zone_status
 
-            # Then, add all paired zones that don't have problems
-            for zone_id in self.paired_zones:
-                if zone_id not in processed_data["zones"]:
-                    processed_data["zones"][zone_id] = "normal"
-
-            LOGGER.debug("Processed data structure: %s", processed_data)
             self.stored_status = processed_data
-            self.attemt = 0
+            self.attempt = 0
             self.next_update = datetime.now()
 
             return processed_data
 
         except Exception as err:
             LOGGER.error("Error fetching AMT-8000 data: %s", err)
-            seconds = 2 ** self.attemt
+            seconds = 2 ** self.attempt
             time_difference = timedelta(seconds=seconds)
             self.next_update = datetime.now() + time_difference
             LOGGER.info("Next retry after %s", self.next_update)
@@ -97,6 +94,6 @@ class AmtCoordinator(DataUpdateCoordinator):
                 if hasattr(self.client, 'client') and self.client.client is not None:
                     self.client.close()
             except CommunicationError:
-                LOGGER.debug("Client already disconnected")
+                pass
             except Exception as e:
                 LOGGER.debug("Error closing client connection: %s", str(e))

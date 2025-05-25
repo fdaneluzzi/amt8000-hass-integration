@@ -40,25 +40,15 @@ def calculate_checksum(buffer):
 
 def build_status(data):
     """Build the amt-8000 status from a given array of bytes."""
-    # Log the raw data for debugging
-    LOGGER.debug("Raw data: %s", [hex(x) for x in data])
-    
     # The first 8 bytes are the header
     # Bytes 4-5 contain the length
     length = merge_octets(data[4:6]) - 2
     payload = data[8 : 8 + length]
     
-    # Log the payload for debugging
-    LOGGER.debug("Payload: %s", [hex(x) for x in payload])
-    LOGGER.debug("Payload length: %d", len(payload))
-    
     # Verifica se o payload tem o tamanho mínimo necessário
     if len(payload) < 22:
         LOGGER.error("Payload too short: %d bytes", len(payload))
         return None
-        
-    LOGGER.debug("Payload[0]: 0x%02x", payload[0])
-    LOGGER.debug("Payload[20]: 0x%02x", payload[20])
 
     # O modelo é AMT-8000 se o byte 0 for 0x8b
     model = "AMT-8000" if payload[0] == 0x8b else "Unknown"
@@ -69,7 +59,7 @@ def build_status(data):
     # Read all possible zones (AMT-8000 supports up to 64 zones)
     # Each zone status is represented by 1 byte
     # Zones status starts at byte 86 (22 header + 64 reserved block)
-    max_zones = min(64, len(payload) - 84)  # Calculate how many zones we can readmin(MAX_ZONES, len(payload) - ZONE_START)
+    max_zones = min(64, len(payload) - 84)  # Calculate how many zones we can read
     
     # Skip header (22 bytes) and reserved block (64 bytes)
     for i in range(max_zones):
@@ -77,23 +67,10 @@ def build_status(data):
             # Calculate the correct byte position for each zone
             zone_byte = payload[84 + i]  # Each zone has 1 byte of status
             
-            # Log the raw zone byte for debugging
-            LOGGER.debug("Zone %d raw byte: 0x%02x", i+1, zone_byte)
-            
             zone_status = "normal"
-
-            # Check for different types of zone problems
-            # Bit 0 (0x01): Zone open (1 = open, 0 = closed)
-            # Bit 1 (0x02): Communication failure (1 = failure, 0 = normal)
-            # Bit 2 (0x04): Zone bypassed (1 = bypassed, 0 = normal)
-            # Bit 3 (0x08): Zone low battery (1 = low battery, 0 = normal)
-            # Bit 4 (0x10): Zone tamper (1 = tamper, 0 = normal)
-            # Bit 5 (0x20): Zone triggered (1 = triggered, 0 = normal)
-            # Bits 6-7: Not used (always 0)
-            
             problems = []
             
-            # Verifica todos os problemas ativos
+            # Check for different types of zone problems
             if (zone_byte & 0x01) > 0:  # Bit 0: Zone open
                 problems.append("open")
             if (zone_byte & 0x02) > 0:  # Bit 1: Communication failure
@@ -110,7 +87,7 @@ def build_status(data):
             # If there are any problems, join them with a comma
             if problems:
                 zone_status = ",".join(problems)
-                zones[str(i + 1)] = zone_status  # Zone numbers start at 1
+                zones[str(i + 1)] = zone_status
                 LOGGER.debug("Zone %d status: %s", i+1, zone_status)
         except IndexError:
             LOGGER.warning("Failed to read zone %d: payload too short", i+1)
@@ -135,13 +112,11 @@ def build_status(data):
             status["batteryStatus"] = battery_status_for(payload)
         else:
             status["batteryStatus"] = "unknown"
-            LOGGER.warning("Payload too short to read battery status")
             
         if len(payload) >= 72:
             status["tamper"] = (payload[71] & (1 << 0x01)) > 0
         else:
             status["tamper"] = False
-            LOGGER.warning("Payload too short to read tamper status")
 
         return status
     except Exception as e:
